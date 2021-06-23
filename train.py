@@ -6,29 +6,29 @@ from datasets import SRDataset
 from utils import *
 
 # Data parameters
-data_folder = './'  # folder with JSON data files
+data_folder = 'ex_data'  # folder with JSON data files
 crop_size = 96  # crop size of target HR images
-scaling_factor = 4  # the scaling factor for the generator; the input LR images will be downsampled from the target HR images by this factor
+scaling_factor = 2  # the scaling factor for the generator; the input LR images will be downsampled from the target HR images by this factor
 
 # Generator parameters
 large_kernel_size_g = 9  # kernel size of the first and last convolutions which transform the inputs and outputs
 small_kernel_size_g = 3  # kernel size of all convolutions in-between, i.e. those in the residual and subpixel convolutional blocks
 n_channels_g = 64  # number of channels in-between, i.e. the input and output channels for the residual and subpixel convolutional blocks
 n_blocks_g = 16  # number of residual blocks
-srresnet_checkpoint = "./checkpoint_srresnet.pth.tar"  # filepath of the trained SRResNet checkpoint used for initialization
+srresnet_checkpoint = "checkpoint_srresnet.pth.tar"  # filepath of the trained SRResNet checkpoint used for initialization
 
 # Discriminator parameters
 kernel_size_d = 3  # kernel size in all convolutional blocks
 n_channels_d = 64  # number of output channels in the first convolutional block, after which it is doubled in every 2nd block thereafter
 n_blocks_d = 8  # number of convolutional blocks
 fc_size_d = 1024  # size of the first fully connected layer
-
+os.makedirs('checkpoints', exist_ok=True)
 # Learning parameters
-checkpoint = None  # path to model (SRGAN) checkpoint, None if none
+checkpoint = 'checkpoints/checkpoint_srgan.pth.tar'  # path to model (SRGAN) checkpoint, None if none
 batch_size = 16  # batch size
 start_epoch = 0  # start at this epoch
 iterations = 2e5  # number of training iterations
-workers = 4  # number of workers for loading data in the DataLoader
+workers = 0  # number of workers for loading data in the DataLoader
 vgg19_i = 5  # the index i in the definition for VGG loss; see paper or models.py
 vgg19_j = 4  # the index j in the definition for VGG loss; see paper or models.py
 beta = 1e-3  # the coefficient to weight the adversarial loss in the perceptual loss
@@ -49,7 +49,7 @@ def main():
     global start_epoch, epoch, checkpoint, srresnet_checkpoint
 
     # Initialize model or load checkpoint
-    if checkpoint is None:
+    if checkpoint is None or not os.path.exists(checkpoint):
         # Generator
         generator = Generator(large_kernel_size=large_kernel_size_g,
                               small_kernel_size=small_kernel_size_g,
@@ -58,7 +58,8 @@ def main():
                               scaling_factor=scaling_factor)
 
         # Initialize generator network with pretrained SRResNet
-        generator.initialize_with_srresnet(srresnet_checkpoint=srresnet_checkpoint)
+        # if os.path.exists(srresnet_checkpoint):
+        #     generator.initialize_with_srresnet(srresnet_checkpoint=srresnet_checkpoint)
 
         # Initialize generator's optimizer
         optimizer_g = torch.optim.Adam(params=filter(lambda p: p.requires_grad, generator.parameters()),
@@ -100,11 +101,11 @@ def main():
 
     # Custom dataloaders
     train_dataset = SRDataset(data_folder,
-                              split='train',
+                              mode='train',
                               crop_size=crop_size,
                               scaling_factor=scaling_factor,
-                              lr_img_type='imagenet-norm',
-                              hr_img_type='imagenet-norm')
+                              lr_img_type='[-1, 1]',
+                              hr_img_type='[-1, 1]')
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=workers,
                                                pin_memory=True)
 
@@ -136,7 +137,7 @@ def main():
                     'discriminator': discriminator,
                     'optimizer_g': optimizer_g,
                     'optimizer_d': optimizer_d},
-                   'checkpoint_srgan.pth.tar')
+                   'checkpoints/checkpoint_srgan.pth.tar')
 
 
 def train(train_loader, generator, discriminator, truncated_vgg19, content_loss_criterion, adversarial_loss_criterion,

@@ -133,7 +133,8 @@ class SRResNet(nn.Module):
     The SRResNet, as defined in the paper.
     """
 
-    def __init__(self, large_kernel_size=9, small_kernel_size=3, n_channels=64, n_blocks=16, scaling_factor=4):
+    def __init__(self, large_kernel_size=9, small_kernel_size=3, n_channels=64, n_blocks=16, scaling_factor=4,
+                 in_channels = 3):
         """
         :param large_kernel_size: kernel size of the first and last convolutions which transform the inputs and outputs
         :param small_kernel_size: kernel size of all convolutions in-between, i.e. those in the residual and subpixel convolutional blocks
@@ -147,8 +148,9 @@ class SRResNet(nn.Module):
         scaling_factor = int(scaling_factor)
         assert scaling_factor in {2, 4, 8}, "The scaling factor must be 2, 4, or 8!"
 
+
         # The first convolutional block
-        self.conv_block1 = ConvolutionalBlock(in_channels=3, out_channels=n_channels, kernel_size=large_kernel_size,
+        self.conv_block1 = ConvolutionalBlock(in_channels=in_channels, out_channels=n_channels, kernel_size=large_kernel_size,
                                               batch_norm=False, activation='PReLu')
 
         # A sequence of n_blocks residual blocks, each containing a skip-connection across the block
@@ -205,7 +207,8 @@ class Generator(nn.Module):
 
         # The generator is simply an SRResNet, as above
         self.net = SRResNet(large_kernel_size=large_kernel_size, small_kernel_size=small_kernel_size,
-                            n_channels=n_channels, n_blocks=n_blocks, scaling_factor=scaling_factor)
+                            n_channels=n_channels, n_blocks=n_blocks, scaling_factor=scaling_factor,
+                            in_channels = 3)
 
     def initialize_with_srresnet(self, srresnet_checkpoint):
         """
@@ -252,10 +255,10 @@ class Discriminator(nn.Module):
         # The first convolutional block is unique because it does not employ batch normalization
         conv_blocks = list()
         for i in range(n_blocks):
-            out_channels = (n_channels if i is 0 else in_channels * 2) if i % 2 is 0 else in_channels
+            out_channels = (n_channels if i == 0 else in_channels * 2) if i % 2 == 0 else in_channels
             conv_blocks.append(
                 ConvolutionalBlock(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                                   stride=1 if i % 2 is 0 else 2, batch_norm=i is not 0, activation='LeakyReLu'))
+                                   stride=1 if i % 2 == 0 else 2, batch_norm=i != 0, activation='LeakyReLu'))
             in_channels = out_channels
         self.conv_blocks = nn.Sequential(*conv_blocks)
 
