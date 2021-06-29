@@ -15,7 +15,7 @@ large_kernel_size_g = 9  # kernel size of the first and last convolutions which 
 small_kernel_size_g = 3  # kernel size of all convolutions in-between, i.e. those in the residual and subpixel convolutional blocks
 n_channels_g = 64  # number of channels in-between, i.e. the input and output channels for the residual and subpixel convolutional blocks
 n_blocks_g = 16  # number of residual blocks
-srresnet_checkpoint = "checkpoint_srresnet.pth.tar"  # filepath of the trained SRResNet checkpoint used for initialization
+srresnet_checkpoint = "checkpoints/checkpoint_srresnet.pth.tar"  # filepath of the trained SRResNet checkpoint used for initialization
 
 # Discriminator parameters
 kernel_size_d = 3  # kernel size in all convolutional blocks
@@ -104,8 +104,8 @@ def main():
                               mode='train',
                               crop_size=crop_size,
                               scaling_factor=scaling_factor,
-                              lr_img_type='[-1, 1]',
-                              hr_img_type='[-1, 1]')
+                              lr_img_type='imagenet-norm',
+                              hr_img_type='imagenet-norm')
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=workers,
                                                pin_memory=True)
 
